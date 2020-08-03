@@ -1,0 +1,119 @@
+---
+title: "ANlY 699-Project Final Report- Code"
+author: "Raghu Sanugommula"
+date: "August 2,2020"
+output:
+  pdf_document: default
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width = 12, fig.height = 8, echo = TRUE)
+
+Project<-read.csv("/Users/raghumohanreddysanugommula/Desktop/Machine Learning/699- 5th Semester/Project/master.csv",header=TRUE)
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(tidyr)
+library(knitr)
+library(ggpubr)
+library(sqldf)
+library(sqldf)
+library(plotly)
+library(moments)
+library(sqldf)
+library(purrr)
+library(DataExplorer)
+library(caret)
+library(corrplot)
+library(readr)
+library(mnormt)
+library(psych)
+library(tidyverse)
+library(Hmisc)
+library(car)
+library("writexl")
+
+
+```
+
+
+### Data Preprocessing
+```{r warning=FALSE, message=FALSE}
+
+Project1<-na.omit(Project)
+str(Project1)
+data.frame(Project1)
+
+Project1$suicides_no<-as.numeric(Project1$suicides_no)
+Project1$population<-as.numeric(Project1$population)
+Project1$gdp_per_capita....<-as.numeric(Project1$gdp_per_capita....)
+Project1$gdp_for_year....<-as.numeric(Project1$gdp_for_year....)
+str(Project1)
+datascaled <- preProcess(Project1, method=c("center", "scale"))
+datascaled
+Data_Scaled<-predict(datascaled,Project1)
+data_v1<-sqldf('select suicides_no,Population,[gdp_per_capita....],[HDI.for.year],[suicides.100k.pop] from Data_Scaled')
+
+Data_v2<-sqrt(data_v1)
+data_v3<-sqrt(Data_v2)
+hist(data_v3)
+Data_Scaled
+
+skewness(data_v3)
+kurtosis(data_v3)
+
+```
+
+### Time series Visualization
+```{r warning=FALSE, message=FALSE}
+Timeseries<-sqldf('select sum([suicides_no]) as Suicides,sum([gdp_per_capita....]) as GDP, country,year from Project1 where year between 2008 and 2016 group by country, year')
+
+str(Timeseries)
+write.table(Timeseries,file="/Users/raghumohanreddysanugommula/Desktop/Machine Learning/699- 5th Semester/Project/projectfile.csv",sep=",")
+
+#TimeseriesPlot
+Timeseries1<-sqldf('select sum([suicides_no]) as Suicides,sum([gdp_per_capita....]) as GDP, country,year from Project1 where year between 2008 and 2016 and country in ("United Kingdom", "Japan","Canada","United States","Brazil") group by country, year')
+ggplot(data = Timeseries1, aes(x=year, y=Suicides)) + geom_line(aes(colour=country))+labs(title="Number of Suicides Over Time")
+
+ 
+ggplot(Timeseries1)+geom_line(aes(x = year, y = Suicides, group = country, colour = country,size=2))+labs(title="Number of Suicides By Country of Interest and Year",label=rownames(Timeseries1))
+   
+```
+
+### Coorelation Matrix
+```{r warning=FALSE, message=FALSE}
+
+data_v3
+colnames(data_v3)<-c("Suicides","Population","Suicidesper100kPopulation","HDI","GDP_Per_Capita")
+corrmatrix<-cor(data_v3)
+corrplot(corrmatrix,order="hclust",type='upper',tl.srt=45)
+data_v5<-rcorr(as.matrix(corrmatrix),type="pearson")
+
+data_v5$r
+```
+### Box Plots
+```{r warning=FALSE, message=FALSE}
+ggplot(Timeseries1, aes(x=country, y=Suicides)) + 
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=4)
+
+plot(data_v3)
+Data_Scaled
+```
+
+### LINEAR REGRESSION
+```{r warning=FALSE, message=FALSE}
+model2 <- lm(suicides_no ~ population+gdp_per_capita...., data = Data_Scaled)
+summary(model2)
+model3 <- lm(suicides_no ~ population+gdp_per_capita....+HDI.for.year+year,data = Data_Scaled)
+summary(model3)
+model4 <- lm(suicides_no ~ population+gdp_per_capita....,data = Data_Scaled)
+summary(model4)
+#residual Error
+sigma(model2)/mean(Data_Scaled$suicides_no)
+#residual plot
+
+plot(lm(suicides_no ~ population+gdp_per_capita....,data = Data_Scaled))
+```
